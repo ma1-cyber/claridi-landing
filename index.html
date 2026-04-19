@@ -3,1396 +3,328 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClariDI — Clinical Documentation Intelligence</title>
-  <meta name="description" content="ClariDI transforms clinical documentation with AI-powered CDI auditing. Capture every diagnosis. Optimize every DRG. Coming soon to ClariDI.health." />
+  <title>ClariDI — CDI at the Point of Care</title>
+  <meta name="description" content="ClariDI flags documentation gaps in real time as physicians write — before the chart closes. CDI at the point of care." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #05080f;
-      --surface:   #0d1424;
-      --border:    rgba(255,255,255,0.07);
-      --cyan:      #00d9ff;
-      --cyan-dim:  rgba(0,217,255,0.12);
-      --violet:    #7c5cfc;
-      --violet-dim:rgba(124,92,252,0.12);
-      --text:      #e8edf5;
-      --muted:     #6b7a99;
-      --success:   #22d3a0;
+      --bg:          #f8fafc;
+      --surface:     #ffffff;
+      --border:      #e2e8f0;
+      --border-dark: #cbd5e1;
+      --navy:        #1e3a5f;
+      --navy-mid:    #2d5282;
+      --teal:        #0d9488;
+      --teal-light:  #f0fdfa;
+      --teal-dim:    rgba(13,148,136,0.08);
+      --amber:       #d97706;
+      --amber-bg:    #fffbeb;
+      --amber-border:#fde68a;
+      --red:         #dc2626;
+      --red-bg:      #fef2f2;
+      --red-border:  #fecaca;
+      --text:        #1e293b;
+      --muted:       #64748b;
+      --success:     #16a34a;
+      --success-bg:  #f0fdf4;
     }
 
     html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    /* ── Animated background ── */
-    .bg-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.18;
-      animation: drift 18s ease-in-out infinite alternate;
-      will-change: transform;
-      transform: translateZ(0);
-    }
-    .orb-1 {
-      width: 700px; height: 700px;
-      background: radial-gradient(circle, #00d9ff, #0070ff);
-      top: -200px; left: -200px;
-      animation-delay: 0s;
-    }
-    .orb-2 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, #7c5cfc, #c026d3);
-      bottom: -150px; right: -100px;
-      animation-delay: -6s;
-    }
-    .orb-3 {
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, #0070ff, #00d9ff);
-      top: 50%; left: 50%;
-      transform: translate(-50%,-50%);
-      animation-delay: -12s;
-      opacity: 0.08;
-    }
-
-    @keyframes drift {
-      0%   { transform: translate(0, 0) scale(1); }
-      50%  { transform: translate(40px, 30px) scale(1.08); }
-      100% { transform: translate(-20px, 50px) scale(0.95); }
-    }
-
-    /* dot grid overlay */
-    .dot-grid {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
-      background-size: 32px 32px;
-      pointer-events: none;
-    }
-
-    /* ── Layout ── */
-    .page {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    /* ── Splash ── */
+    #splash { position: fixed; inset: 0; z-index: 999; background: #0a1628; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; pointer-events: none; will-change: opacity; animation: splashExit 0.8s ease-in-out 3.3s forwards; }
+    @keyframes splashExit { from { opacity: 1; } to { opacity: 0; } }
+    .splash-logo-wrap { opacity: 0; will-change: opacity, transform; animation: logoIn 3.0s ease-out 0.2s forwards; }
+    @keyframes logoIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+    .splash-tagline { font-size: 11px; font-weight: 500; color: #475569; letter-spacing: 3px; text-transform: uppercase; }
+    .page { opacity: 0; will-change: opacity; animation: pageReveal 1.4s ease-in-out 3.3s forwards; min-height: 100vh; display: flex; flex-direction: column; }
+    @keyframes pageReveal { from { opacity: 0; } to { opacity: 1; } }
 
     /* ── Nav ── */
-    nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 28px 48px;
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-      background: rgba(5,8,15,0.6);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-
-    .logo-mark {
-      width: 36px; height: 36px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, var(--cyan), var(--violet));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Sora', sans-serif;
-      font-weight: 800;
-      font-size: 15px;
-      color: #fff;
-      letter-spacing: -0.5px;
-      box-shadow: 0 0 20px rgba(0,217,255,0.25);
-    }
-
-    .logo-text {
-      font-family: 'Sora', sans-serif;
-      font-weight: 700;
-      font-size: 20px;
-      color: var(--text);
-      letter-spacing: -0.3px;
-    }
-
-    .logo-text span {
-      color: var(--cyan);
-    }
-
-    .nav-badge {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--cyan);
-      background: var(--cyan-dim);
-      border: 1px solid rgba(0,217,255,0.25);
-      padding: 4px 12px;
-      border-radius: 999px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 64px; }
+    .logo { display: flex; align-items: center; text-decoration: none; }
+    .nav-links { display: flex; align-items: center; gap: 32px; margin-left: 40px; }
+    .nav-link { font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .nav-link:hover { color: var(--navy); }
+    .nav-left { display: flex; align-items: center; }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .nav-badge { font-size: 12px; font-weight: 600; color: var(--teal); background: var(--teal-light); border: 1px solid rgba(13,148,136,0.2); padding: 5px 14px; border-radius: 999px; letter-spacing: 0.2px; }
+    .nav-badge-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); margin-right: 6px; vertical-align: middle; animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .btn-nav { font-size: 13px; font-weight: 600; color: #fff; background: var(--navy); border: none; border-radius: 8px; padding: 8px 18px; cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.15s; }
+    .btn-nav:hover { background: var(--navy-mid); }
 
     /* ── Hero ── */
-    .hero {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 80px 24px 60px;
-      gap: 0;
-    }
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; max-width: 1100px; margin: 0 auto; padding: 72px 48px; }
+    .hero-left { display: flex; flex-direction: column; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--teal); margin-bottom: 20px; }
+    .eyebrow-line { width: 24px; height: 2px; background: var(--teal); border-radius: 1px; }
+    h1 { font-size: clamp(32px, 4vw, 50px); font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; color: var(--navy); margin-bottom: 18px; }
+    h1 em { font-style: normal; color: var(--teal); }
+    .subtitle { font-size: 16px; font-weight: 400; color: var(--muted); line-height: 1.75; margin-bottom: 28px; max-width: 460px; }
 
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--cyan);
-      background: var(--cyan-dim);
-      border: 1px solid rgba(0,217,255,0.2);
-      padding: 6px 16px;
-      border-radius: 999px;
-      margin-bottom: 32px;
-    }
+    /* Comparison strip */
+    .comparison-strip { display: flex; flex-direction: column; gap: 6px; margin-bottom: 28px; padding: 14px 16px; background: #f1f5f9; border-radius: 10px; border-left: 3px solid var(--border-dark); }
+    .comparison-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+    .comparison-before { color: #94a3b8; text-decoration: line-through; }
+    .comparison-arrow { color: var(--teal); font-weight: 700; font-size: 11px; }
+    .comparison-after { color: var(--navy); font-weight: 600; }
 
-    .eyebrow-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      animation: pulse 2s ease infinite;
-    }
+    .trust-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+    .trust-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .trust-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border-dark); }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.4; transform: scale(0.7); }
-    }
-
-    h1 {
-      font-family: 'Sora', sans-serif;
-      font-size: clamp(42px, 6vw, 80px);
-      font-weight: 800;
-      line-height: 1.05;
-      letter-spacing: -2px;
-      color: #fff;
-      max-width: 900px;
-      margin-bottom: 28px;
-    }
-
-    h1 .gradient-text {
-      background: linear-gradient(90deg, var(--cyan), var(--violet));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .subtitle {
-      font-size: clamp(16px, 2vw, 20px);
-      font-weight: 400;
-      color: var(--muted);
-      max-width: 620px;
-      line-height: 1.7;
-      margin-bottom: 56px;
-    }
-
-    /* ── Value props ── */
-    .props {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 64px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .prop {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(8px);
-      transition: border-color 0.25s, background 0.25s;
-      min-width: 200px;
-    }
-
-    .prop:hover {
-      border-color: rgba(0,217,255,0.25);
-      background: rgba(0,217,255,0.04);
-    }
-
-    .prop-icon {
-      width: 38px; height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .prop-icon.blue  { background: rgba(0,112,255,0.15); }
-    .prop-icon.cyan  { background: var(--cyan-dim); }
-    .prop-icon.violet{ background: var(--violet-dim); }
-
-    .prop-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      line-height: 1.4;
-    }
-
-    .prop-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* ── CTA block ── */
-    .cta-block {
-      width: 100%;
-      max-width: 540px;
-    }
-
-    .cta-label {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 14px;
-      font-weight: 500;
-    }
-
-    .cta-label strong { color: var(--text); }
-
-    .email-form {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .email-form input[type="email"] {
-      flex: 1;
-      min-width: 0;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 20px;
-      font-size: 15px;
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .email-form input[type="email"]::placeholder { color: var(--muted); }
-
-    .email-form input[type="email"]:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(0,217,255,0.12);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--cyan), #0070ff);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      border: none;
-      border-radius: 12px;
-      padding: 14px 26px;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(0,217,255,0.25);
-      letter-spacing: 0.2px;
-    }
-
-    .btn-primary:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 28px rgba(0,217,255,0.35);
-    }
-
+    /* CTA */
+    .cta-block { display: flex; flex-direction: column; gap: 10px; }
+    .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .email-form { display: flex; gap: 8px; flex: 1; min-width: 0; }
+    .email-form input[type="email"] { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border-dark); border-radius: 8px; padding: 11px 16px; font-size: 14px; color: var(--text); font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .email-form input[type="email"]::placeholder { color: #94a3b8; }
+    .email-form input[type="email"]:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .btn-primary { background: var(--navy); color: #fff; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer; white-space: nowrap; transition: background 0.15s, transform 0.12s; }
+    .btn-primary:hover { background: var(--navy-mid); transform: translateY(-1px); }
     .btn-primary:active { transform: translateY(0); }
+    .btn-secondary { background: transparent; color: var(--navy); font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; border: 1px solid var(--border-dark); border-radius: 8px; padding: 11px 22px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 7px; transition: background 0.15s, border-color 0.15s; }
+    .btn-secondary:hover { background: var(--bg); border-color: var(--navy); }
+    .success-msg { display: none; align-items: center; gap: 8px; color: var(--success); font-size: 13px; font-weight: 500; background: var(--success-bg); border: 1px solid rgba(22,163,74,0.2); border-radius: 8px; padding: 10px 14px; }
+    .cta-note { font-size: 12px; color: #94a3b8; }
 
-    .success-msg {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      color: var(--success);
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 16px;
-      background: rgba(34,211,160,0.08);
-      border: 1px solid rgba(34,211,160,0.2);
-      border-radius: 10px;
-      padding: 12px 16px;
-    }
+    /* Hero right */
+    .hero-right { position: relative; }
+    .hero-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 20px 40px -12px rgba(30,58,95,0.1); }
+    .hero-card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: #f8fafc; }
+    .hero-card-title { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .status-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+    .status-unsigned { color: var(--amber); background: var(--amber-bg); border: 1px solid var(--amber-border); }
+    .status-complete { color: var(--success); background: var(--success-bg); border: 1px solid rgba(22,163,74,0.25); }
+    .hero-card-body { padding: 14px 16px; font-size: 13px; line-height: 1.8; color: var(--text); }
+    .note-hl { background: #fef9c3; border-bottom: 2px solid #fbbf24; border-radius: 2px; padding: 0 1px; }
+    .note-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px; }
+    .finding-card { margin: 10px 0 0; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; }
+    .finding-card.amber { border-color: var(--amber-border); background: var(--amber-bg); }
+    .finding-card.teal { border-color: rgba(13,148,136,0.25); background: var(--teal-light); }
+    .finding-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 700; }
+    .finding-icon.amber { background: #fde68a; color: #92400e; }
+    .finding-icon.teal { background: rgba(13,148,136,0.15); color: var(--teal); }
+    .finding-body { flex: 1; min-width: 0; }
+    .finding-title { font-size: 11.5px; font-weight: 700; color: var(--text); margin-bottom: 2px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .finding-roi { font-size: 10.5px; font-weight: 700; color: var(--success); background: var(--success-bg); border: 1px solid rgba(22,163,74,0.2); border-radius: 999px; padding: 1px 6px; }
+    .finding-desc { font-size: 11px; color: var(--muted); line-height: 1.45; }
+    .finding-btn { font-size: 11px; font-weight: 600; font-family: 'Inter', sans-serif; color: #fff; background: var(--navy); border: none; border-radius: 5px; padding: 5px 9px; cursor: default; white-space: nowrap; flex-shrink: 0; align-self: center; }
+    .hero-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--border); background: #f8fafc; }
+    .hero-card-footer-label { font-size: 11px; color: var(--muted); }
+    .hero-card-total { font-size: 11px; font-weight: 700; color: var(--success); }
 
-    .divider-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 16px;
-      color: var(--muted);
-      font-size: 12px;
-    }
+    /* ── Differentiators strip ── */
+    .diff-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .diff-inner { max-width: 1100px; margin: 0 auto; padding: 0 48px; display: grid; grid-template-columns: repeat(3, 1fr); }
+    .diff { padding: 28px 32px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--border); }
+    .diff:last-child { border-right: none; }
+    .diff-vs { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; }
+    .diff-label { font-size: 14px; font-weight: 700; color: var(--navy); }
+    .diff-sub { font-size: 13px; color: var(--muted); line-height: 1.55; }
+    .diff-tag { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 600; color: var(--teal); background: var(--teal-light); border: 1px solid rgba(13,148,136,0.15); border-radius: 999px; padding: 2px 10px; }
 
-    .divider-row::before,
-    .divider-row::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .btn-demo {
-      width: 100%;
-      background: transparent;
-      border: 1px solid rgba(124,92,252,0.4);
-      color: var(--text);
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      border-radius: 12px;
-      padding: 14px 26px;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      letter-spacing: 0.2px;
-    }
-
-    .btn-demo:hover {
-      background: var(--violet-dim);
-      border-color: var(--violet);
-      transform: translateY(-1px);
-    }
-
-    /* ── Audience bar ── */
-    .audience-bar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 52px;
-    }
-
-    .audience-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      margin-right: 4px;
-    }
-
-    .audience-tag {
-      font-size: 11px;
-      font-weight: 500;
-      color: rgba(232,237,245,0.6);
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 4px 12px;
-    }
+    /* ── Section scaffolding ── */
+    .section-kicker { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--teal); margin-bottom: 10px; }
+    .section-heading { font-size: clamp(22px, 3vw, 32px); font-weight: 800; color: var(--navy); letter-spacing: -0.8px; margin-bottom: 12px; }
+    .section-sub { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 560px; margin-bottom: 48px; }
 
     /* ── How it works ── */
-    .how-it-works {
-      padding: 64px 24px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-    }
+    .how-section { max-width: 1100px; margin: 0 auto; padding: 80px 48px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; position: relative; }
+    .steps::before { content: ''; position: absolute; top: 18px; left: calc(33.33% / 2); right: calc(33.33% / 2); height: 1px; background: var(--border); z-index: 0; }
+    .step { padding: 0 32px 0 0; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 1; }
+    .step:last-child { padding-right: 0; }
+    .step-number { width: 36px; height: 36px; border-radius: 10px; background: var(--navy); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .step-title { font-size: 15px; font-weight: 700; color: var(--navy); }
+    .step-desc { font-size: 13.5px; color: var(--muted); line-height: 1.65; }
+    .step-outcome { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--success); margin-top: 4px; }
 
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
+    /* ── Built for section ── */
+    .for-section { background: var(--bg); padding: 80px 48px; border-top: 1px solid var(--border); }
+    .for-inner { max-width: 1100px; margin: 0 auto; }
+    .for-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .for-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .for-card:hover { border-color: var(--border-dark); box-shadow: 0 4px 16px rgba(30,58,95,0.06); }
+    .for-card.featured { border-color: rgba(13,148,136,0.3); background: linear-gradient(160deg, #fff 70%, #f0fdfa); }
+    .for-card-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); }
+    .for-card.featured .for-card-role { color: var(--teal); }
+    .for-card-name { font-size: 18px; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; }
+    .for-card-pain { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.6; padding: 12px 14px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--border-dark); }
+    .for-card.featured .for-card-pain { background: rgba(13,148,136,0.04); border-left-color: var(--teal); }
+    .for-card-solution { font-size: 14px; font-weight: 600; color: var(--navy); line-height: 1.55; }
+    .for-card-bullets { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .for-card-bullets li { font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+    .for-card-bullets li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--teal); flex-shrink: 0; margin-top: 6px; }
 
-    .section-title {
-      font-family: 'Sora', sans-serif;
-      font-size: clamp(22px, 3vw, 32px);
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.5px;
-      margin-bottom: 48px;
-    }
-
-    .steps {
-      display: flex;
-      gap: 0;
-      justify-content: center;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    .step {
-      flex: 1;
-      min-width: 200px;
-      max-width: 260px;
-      padding: 0 24px;
-      position: relative;
-    }
-
-    .step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      top: 22px;
-      right: -1px;
-      width: 40px;
-      height: 1px;
-      background: linear-gradient(90deg, var(--border), transparent);
-    }
-
-    .step-number {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-      font-family: 'Sora', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--cyan);
-    }
-
-    .step-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-
-    .step-desc {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* ── Live animated demo ── */
-    .live-demo-section {
-      padding: 64px 24px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-    }
-
-    .live-demo {
-      display: flex;
-      gap: 16px;
-      max-width: 900px;
-      margin: 0 auto;
-      text-align: left;
-      align-items: flex-start;
-    }
-
-    .demo-editor {
-      flex: 1.4;
-      background: rgba(13,20,36,0.9);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      min-height: 320px;
-    }
-
-    .demo-editor-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .demo-editor-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .demo-editor-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-      display: block;
-    }
-
-    .demo-editor-body {
-      padding: 18px;
-      min-height: 280px;
-      font-size: 13px;
-      line-height: 1.85;
-      color: rgba(232,237,245,0.8);
-      font-family: 'Inter', sans-serif;
-    }
-
+    /* ── Animated demo section ── */
+    .demo-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 80px 48px; }
+    .demo-section-inner { max-width: 1000px; margin: 0 auto; }
+    .demo-section-header { margin-bottom: 40px; }
+    .demo-disclaimer { font-size: 12.5px; color: #94a3b8; margin-top: 6px; }
+    .live-demo { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; align-items: flex-start; }
+    .demo-editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .demo-editor-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: #f8fafc; }
+    .demo-editor-title { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .demo-editor-sub { font-size: 11px; color: #94a3b8; display: block; margin-top: 1px; }
+    .demo-editor-body { padding: 16px; min-height: 300px; font-size: 13px; line-height: 1.85; color: var(--text); font-family: 'Inter', sans-serif; }
     .demo-typewriter { display: inline; white-space: pre-wrap; }
-
-    .demo-cursor {
-      display: inline-block;
-      color: var(--cyan);
-      font-weight: 300;
-      animation: blink 1s step-end infinite;
-      margin-left: 1px;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0; }
-    }
-
-    .hl-cyan   { background: rgba(0,217,255,0.12); border-bottom: 1px solid rgba(0,217,255,0.4); border-radius: 2px; padding: 0 2px; }
-    .hl-violet { background: rgba(124,92,252,0.12); border-bottom: 1px solid rgba(124,92,252,0.4); border-radius: 2px; padding: 0 2px; }
-    .hl-blue   { background: rgba(96,165,250,0.12); border-bottom: 1px solid rgba(96,165,250,0.4); border-radius: 2px; padding: 0 2px; }
-
-    .demo-flags-panel {
-      flex: 1;
-      background: rgba(13,20,36,0.9);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      min-height: 320px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .demo-flags-header {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .demo-flag-count {
-      margin-left: auto;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--cyan);
-      background: var(--cyan-dim);
-      border: 1px solid rgba(0,217,255,0.2);
-      border-radius: 999px;
-      padding: 2px 8px;
-      transition: all 0.3s ease;
-    }
-
-    .demo-flags-list {
-      flex: 1;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .demo-empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      opacity: 0.5;
-    }
-
-    .demo-flag-card {
-      background: rgba(0,217,255,0.04);
-      border: 1px solid rgba(0,217,255,0.2);
-      border-radius: 10px;
-      padding: 11px 12px;
-      opacity: 0;
-      transform: translateX(12px);
-      transition: opacity 0.4s ease, transform 0.4s ease;
-    }
-
-    .demo-flag-card.violet {
-      background: rgba(124,92,252,0.04);
-      border-color: rgba(124,92,252,0.2);
-    }
-
-    .demo-flag-card.blue {
-      background: rgba(96,165,250,0.04);
-      border-color: rgba(96,165,250,0.2);
-    }
-
-    .demo-flag-card.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .demo-flag-card-title {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .demo-flag-card-roi {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--success);
-      background: rgba(34,211,160,0.08);
-      border: 1px solid rgba(34,211,160,0.2);
-      border-radius: 999px;
-      padding: 1px 7px;
-      white-space: nowrap;
-    }
-
-    .demo-flag-card-evidence {
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.5;
-      margin-bottom: 8px;
-    }
-
-    .demo-flag-card-btn {
-      font-size: 11px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 5px 10px;
-      cursor: default;
-      background: linear-gradient(135deg, var(--cyan), #0070ff);
-    }
-
-    .demo-flag-card.violet .demo-flag-card-btn {
-      background: linear-gradient(135deg, var(--violet), #c026d3);
-    }
-
-    .demo-flag-card.blue .demo-flag-card-btn {
-      background: linear-gradient(135deg, #60a5fa, #3b82f6);
-    }
-
-    .demo-restart {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--muted);
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-family: 'Inter', sans-serif;
-      transition: color 0.2s;
-    }
-
-    .demo-restart:hover { color: var(--text); }
-
-    @media (max-width: 640px) {
-      .live-demo { flex-direction: column; }
-    }
-
-    /* ── Physician mock UI ── */
-    .physician-demo {
-      padding: 0 24px 64px;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-
-    .mock-note {
-      background: rgba(13,20,36,0.8);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      backdrop-filter: blur(8px);
-    }
-
-    .mock-note-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .mock-note-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.3px;
-    }
-
-    .mock-note-status {
-      font-size: 11px;
-      font-weight: 600;
-      color: #f59e0b;
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.2);
-      border-radius: 999px;
-      padding: 2px 10px;
-    }
-
-    .mock-note-body {
-      padding: 20px;
-    }
-
-    .mock-note-text {
-      font-size: 13.5px;
-      color: rgba(232,237,245,0.75);
-      line-height: 1.8;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .mock-highlight {
-      background: rgba(0,217,255,0.1);
-      border-bottom: 1px solid rgba(0,217,255,0.4);
-      color: var(--text);
-      border-radius: 2px;
-      padding: 0 2px;
-    }
-
-    .mock-flag {
-      margin: 0 16px 16px;
-      background: rgba(0,217,255,0.04);
-      border: 1px solid rgba(0,217,255,0.2);
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .mock-flag-icon {
-      width: 28px; height: 28px;
-      border-radius: 8px;
-      background: var(--cyan-dim);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .mock-flag-body { flex: 1; min-width: 0; }
-
-    .mock-flag-title {
-      font-size: 12.5px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .mock-flag-roi {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--success);
-      background: rgba(34,211,160,0.08);
-      border: 1px solid rgba(34,211,160,0.2);
-      border-radius: 999px;
-      padding: 1px 8px;
-    }
-
-    .mock-flag-evidence {
-      font-size: 11.5px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .mock-highlight-2 {
-      background: rgba(124,92,252,0.1);
-      border-bottom: 1px solid rgba(124,92,252,0.4);
-      color: var(--text);
-      border-radius: 2px;
-      padding: 0 2px;
-    }
-
-    .mock-flag-btn {
-      flex-shrink: 0;
-      background: linear-gradient(135deg, var(--cyan), #0070ff);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      cursor: default;
-      white-space: nowrap;
-    }
-
-    /* ── Impact teaser ── */
-    .impact-teaser {
-      margin: 0 24px 64px;
-      max-width: 760px;
-      margin-left: auto;
-      margin-right: auto;
-      background: rgba(0,217,255,0.04);
-      border: 1px solid rgba(0,217,255,0.15);
-      border-radius: 16px;
-      padding: 28px 36px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .impact-text {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-      max-width: 480px;
-    }
-
-    .impact-text strong { color: var(--text); }
-
-    .impact-figure {
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .impact-value {
-      font-family: 'Sora', sans-serif;
-      font-size: 36px;
-      font-weight: 800;
-      background: linear-gradient(90deg, var(--cyan), var(--violet));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -1.5px;
-      line-height: 1;
-    }
-
-    .impact-unit {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      margin-top: 4px;
-    }
-
-    /* ── Social proof ── */
-    .social-proof {
-      padding: 48px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 32px;
-    }
-
-    .quotes {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 900px;
-    }
-
-    .quote-card {
-      flex: 1;
-      min-width: 240px;
-      max-width: 360px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      transition: border-color 0.25s;
-    }
-
-    .quote-card:hover { border-color: rgba(0,217,255,0.15); }
-
-    .quote-text {
-      font-size: 14px;
-      color: rgba(232,237,245,0.8);
-      line-height: 1.7;
-      margin-bottom: 16px;
-      font-style: italic;
-    }
-
-    .quote-author {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .quote-avatar {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--cyan), var(--violet));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: #fff;
-      flex-shrink: 0;
-    }
-
-    .quote-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .quote-role {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 1px;
-    }
-
-    .pilot-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 8px 18px;
-    }
-
-    .pilot-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-      animation: pulse 2s ease infinite;
-    }
-
-    /* ── Bottom CTA ── */
-    .bottom-cta {
-      padding: 72px 24px;
-      text-align: center;
-      border-top: 1px solid var(--border);
-    }
-
-    .bottom-cta h2 {
-      font-family: 'Sora', sans-serif;
-      font-size: clamp(26px, 4vw, 42px);
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -1px;
-      margin-bottom: 12px;
-    }
-
-    .bottom-cta h2 span {
-      background: linear-gradient(90deg, var(--cyan), var(--violet));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .bottom-cta p {
-      font-size: 15px;
-      color: var(--muted);
-      margin-bottom: 36px;
-    }
-
-    .bottom-cta-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .bottom-cta .email-form {
-      margin-bottom: 0;
-      max-width: 420px;
-    }
+    .demo-cursor { display: inline-block; color: var(--navy); font-weight: 300; animation: blink 1s step-end infinite; margin-left: 1px; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .hl-amber { background: #fef9c3; border-bottom: 2px solid #fbbf24; border-radius: 2px; padding: 0 1px; }
+    .hl-red   { background: #fee2e2; border-bottom: 2px solid #f87171; border-radius: 2px; padding: 0 1px; }
+    .hl-teal  { background: #ccfbf1; border-bottom: 2px solid #2dd4bf; border-radius: 2px; padding: 0 1px; }
+    .demo-flags-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .demo-flags-header { display: flex; align-items: center; gap: 7px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--navy); background: #f8fafc; }
+    .demo-flag-count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--amber); background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: 999px; padding: 2px 8px; transition: all 0.3s ease; }
+    .demo-flag-count.clean { color: var(--muted); background: var(--bg); border-color: var(--border); }
+    .demo-flags-list { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .demo-empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #94a3b8; font-size: 12px; padding: 32px 0; }
+    .demo-flag-card { border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; opacity: 0; transform: translateX(10px); transition: opacity 0.35s ease, transform 0.35s ease; background: var(--surface); }
+    .demo-flag-card.amber { border-color: var(--amber-border); background: var(--amber-bg); }
+    .demo-flag-card.red   { border-color: var(--red-border);   background: var(--red-bg); }
+    .demo-flag-card.teal  { border-color: rgba(13,148,136,0.25); background: var(--teal-light); }
+    .demo-flag-card.visible { opacity: 1; transform: translateX(0); }
+    .demo-flag-card-title { font-size: 11.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .demo-flag-card-roi { font-size: 10px; font-weight: 700; color: var(--success); background: var(--success-bg); border: 1px solid rgba(22,163,74,0.2); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+    .demo-flag-card-evidence { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+    .demo-flag-card-btn { font-size: 11px; font-weight: 600; font-family: 'Inter', sans-serif; color: #fff; background: var(--navy); border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; transition: background 0.15s; }
+    .demo-flag-card-btn:hover { background: var(--navy-mid); }
+    .demo-flag-card-btn:disabled { cursor: default; }
+    .demo-restart { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--muted); cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; transition: color 0.2s; }
+    .demo-restart:hover { color: var(--navy); }
 
     /* ── Stats strip ── */
-    .stats-strip {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 48px;
-      padding: 32px 24px;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: rgba(13,20,36,0.5);
-      backdrop-filter: blur(8px);
-      flex-wrap: wrap;
-    }
+    .stats-section { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); }
+    .stats-strip { max-width: 1100px; margin: 0 auto; padding: 40px 48px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+    .stat { padding: 0 32px; border-right: 1px solid var(--border); }
+    .stat:first-child { padding-left: 0; }
+    .stat:last-child { border-right: none; }
+    .stat-value { font-size: 30px; font-weight: 800; color: var(--navy); letter-spacing: -1px; line-height: 1; margin-bottom: 6px; }
+    .stat-value span { color: var(--teal); }
+    .stat-label { font-size: 13px; color: var(--muted); font-weight: 500; line-height: 1.4; }
 
-    .stat {
-      text-align: center;
-    }
+    /* ── Impact section ── */
+    .impact-section { background: var(--navy); padding: 80px 48px; }
+    .impact-inner { max-width: 1100px; margin: 0 auto; }
+    .impact-kicker { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #5eead4; margin-bottom: 12px; }
+    .impact-heading { font-size: clamp(24px, 3vw, 36px); font-weight: 800; color: #fff; letter-spacing: -0.8px; line-height: 1.2; margin-bottom: 8px; max-width: 680px; }
+    .impact-subhead { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 52px; max-width: 560px; line-height: 1.65; }
+    .impact-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; margin-bottom: 40px; }
+    .impact-metric { background: rgba(255,255,255,0.04); padding: 28px 32px; transition: background 0.15s; }
+    .impact-metric:hover { background: rgba(255,255,255,0.07); }
+    .impact-metric-value { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -1.5px; line-height: 1; margin-bottom: 6px; }
+    .impact-metric-value em { font-style: normal; color: #5eead4; }
+    .impact-metric-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.65); margin-bottom: 4px; }
+    .impact-metric-sub { font-size: 12px; color: rgba(255,255,255,0.35); line-height: 1.4; }
+    .impact-findings-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 12px; }
+    .impact-findings { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 48px; }
+    .impact-pill { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; padding: 8px 14px; }
+    .impact-pill-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); }
+    .impact-pill-roi { font-size: 12px; font-weight: 700; color: #5eead4; }
+    .impact-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .impact-tier { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 24px; }
+    .impact-tier.featured { background: rgba(94,234,212,0.07); border-color: rgba(94,234,212,0.2); }
+    .impact-tier-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.35); margin-bottom: 4px; }
+    .impact-tier.featured .impact-tier-label { color: #5eead4; }
+    .impact-tier-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .impact-tier-admits { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .impact-tier-value { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.8px; line-height: 1; margin-bottom: 4px; }
+    .impact-tier.featured .impact-tier-value { color: #5eead4; }
+    .impact-tier-unit { font-size: 11px; color: rgba(255,255,255,0.35); }
+    .impact-footnote { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 24px; line-height: 1.5; }
 
-    .stat-value {
-      font-family: 'Sora', sans-serif;
-      font-size: 28px;
-      font-weight: 800;
-      background: linear-gradient(90deg, var(--cyan), var(--violet));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -1px;
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500;
-      margin-top: 4px;
-    }
-
-    .stat-divider {
-      width: 1px;
-      height: 40px;
-      background: var(--border);
-    }
+    /* ── Bottom CTA ── */
+    .bottom-cta { padding: 88px 48px; text-align: center; }
+    .bottom-cta-inner { max-width: 580px; margin: 0 auto; }
+    .bottom-cta-kicker { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+    .bottom-cta h2 { font-size: clamp(26px, 3.5vw, 38px); font-weight: 800; color: var(--navy); letter-spacing: -1px; margin-bottom: 14px; }
+    .bottom-cta h2 span { color: var(--teal); }
+    .bottom-cta p { font-size: 15px; color: var(--muted); margin-bottom: 32px; line-height: 1.65; }
+    .bottom-cta-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .pilot-note { font-size: 12.5px; color: #94a3b8; }
+    .pilot-note strong { color: var(--muted); }
 
     /* ── Footer ── */
-    footer {
-      padding: 32px 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .footer-left {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .footer-left a {
-      color: var(--cyan);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 28px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-left { font-size: 13px; color: var(--muted); }
+    .footer-left a { color: var(--teal); text-decoration: none; font-weight: 500; }
     .footer-left a:hover { text-decoration: underline; }
-
-    .footer-contact {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .contact-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .contact-item:hover { color: var(--text); }
-
-    .contact-icon {
-      width: 28px; height: 28px;
-      border-radius: 7px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-    }
-
-    /* ── Splash screen ──
-       Timeline:
-         0.2s  logo fades in  (0.8s)  → fully visible at ~1.0s
-         1.1s  tagline fades in (0.5s) → fully visible at ~1.6s
-         1.6s  → hold, both fully visible for ~1.4s
-         3.0s  splash fades OUT (1.2s) — slow graceful dissolve
-         3.0s  page  fades IN  (1.2s) — exact same start+duration = seamless crossfade
-    ── */
-    #splash {
-      position: fixed;
-      inset: 0;
-      z-index: 999;
-      background: #05080f;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      pointer-events: none;
-      will-change: opacity;
-      animation: splashExit 0.8s ease-in-out 3.3s forwards;
-    }
-
-    @keyframes splashExit {
-      from { opacity: 1; }
-      to   { opacity: 0; }
-    }
-
-    .splash-logo-wrap {
-      opacity: 0;
-      will-change: opacity, transform;
-      filter: drop-shadow(0 0 28px rgba(96,165,250,0.5)) drop-shadow(0 0 70px rgba(124,92,252,0.2));
-      animation: logoIn 3.0s ease-out 0.2s forwards;
-    }
-
-    @keyframes logoIn {
-      from { opacity: 0; transform: scale(0.92); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    .splash-tagline {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-
-    /* Page: invisible until crossfade starts, then fades in over same duration */
-    .page {
-      opacity: 0;
-      will-change: opacity;
-      animation: pageReveal 1.4s ease-in-out 3.3s forwards;
-    }
-
-    @keyframes pageReveal {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    /* ── Animations ── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    .footer-right { display: flex; align-items: center; gap: 24px; }
+    .footer-link { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .footer-link:hover { color: var(--navy); }
 
     /* ── Modal ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(5,8,15,0.85);
-      backdrop-filter: blur(12px);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
     .modal-overlay.open { display: flex; }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 40px;
-      max-width: 480px;
-      width: 100%;
-      position: relative;
-      animation: fadeUp 0.3s ease both;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 16px; right: 16px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      width: 32px; height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 16px;
-      transition: background 0.2s;
-    }
-
-    .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-
-    .modal h2 {
-      font-family: 'Sora', sans-serif;
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-
-    .modal p {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 24px;
-    }
-
-    .modal-field {
-      margin-bottom: 14px;
-    }
-
-    .modal-field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 6px;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-    }
-
-    .modal-field input,
-    .modal-field select,
-    .modal-field textarea {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 14px;
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      resize: none;
-    }
-
-    .modal-field input:focus,
-    .modal-field select:focus,
-    .modal-field textarea:focus {
-      border-color: var(--violet);
-      box-shadow: 0 0 0 3px rgba(124,92,252,0.12);
-    }
-
-    .modal-field select option { background: var(--surface); }
-
-    .btn-demo-submit {
-      width: 100%;
-      background: linear-gradient(135deg, var(--violet), #c026d3);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      border: none;
-      border-radius: 12px;
-      padding: 14px;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(124,92,252,0.3);
-    }
-
-    .btn-demo-submit:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; max-width: 480px; width: 100%; position: relative; animation: fadeUp 0.25s ease both; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 15px; transition: background 0.15s; }
+    .modal-close:hover { background: var(--border); color: var(--text); }
+    .modal h2 { font-size: 22px; font-weight: 800; color: var(--navy); margin-bottom: 8px; letter-spacing: -0.5px; }
+    .modal p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 24px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.3px; text-transform: uppercase; }
+    .modal-field input, .modal-field select, .modal-field textarea { width: 100%; background: var(--bg); border: 1px solid var(--border-dark); border-radius: 8px; padding: 11px 14px; font-size: 14px; color: var(--text); font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: none; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .btn-demo-submit { width: 100%; background: var(--navy); color: #fff; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; border: none; border-radius: 8px; padding: 13px; cursor: pointer; margin-top: 8px; transition: background 0.15s, transform 0.12s; }
+    .btn-demo-submit:hover { background: var(--navy-mid); transform: translateY(-1px); }
 
     /* ── Responsive ── */
-    @media (max-width: 640px) {
-      nav { padding: 20px 24px; }
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      .hero { grid-template-columns: 1fr; gap: 40px; padding: 48px 24px; }
+      .hero-right { display: none; }
+      .diff-inner { grid-template-columns: 1fr; }
+      .diff { border-right: none; border-bottom: 1px solid var(--border); padding: 24px; }
+      .diff:last-child { border-bottom: none; }
+      .how-section { padding: 56px 24px; }
+      .steps { grid-template-columns: 1fr; gap: 32px; }
+      .steps::before { display: none; }
+      .step { padding: 0; }
+      .for-section { padding: 56px 24px; }
+      .for-cards { grid-template-columns: 1fr; }
+      .demo-section { padding: 56px 24px; }
+      .live-demo { grid-template-columns: 1fr; }
+      .stats-strip { grid-template-columns: repeat(2, 1fr); gap: 32px; padding: 40px 24px; }
+      .stat { border-right: none; padding: 0; }
+      .impact-section { padding: 56px 24px; }
+      .impact-metrics { grid-template-columns: 1fr; }
+      .impact-tiers { grid-template-columns: 1fr; }
+      .bottom-cta { padding: 64px 24px; }
       footer { padding: 24px; flex-direction: column; align-items: flex-start; }
-      .stat-divider { display: none; }
-      .stats-strip { gap: 24px; }
-      .email-form { flex-direction: column; }
-      .email-form input[type="email"] { width: 100%; }
-      .btn-primary { width: 100%; justify-content: center; }
     }
   </style>
 </head>
 <body>
 
-<!-- Background -->
-<div class="bg-canvas">
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-</div>
-<div class="dot-grid"></div>
-
-<!-- Splash intro -->
+<!-- Splash -->
 <div id="splash">
   <div class="splash-logo-wrap">
     <svg width="330" height="84" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="arcTop" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#93c5fd"/>
-          <stop offset="100%" stop-color="#60a5fa"/>
-        </linearGradient>
-        <linearGradient id="arcMid" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#3b82f6"/>
-          <stop offset="100%" stop-color="#60a5fa"/>
-        </linearGradient>
-        <linearGradient id="arcBot" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#1d4ed8"/>
-          <stop offset="100%" stop-color="#60a5fa"/>
-        </linearGradient>
-        <radialGradient id="focalGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.5"/>
-          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
-        </radialGradient>
-        <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feMerge>
-            <feMergeNode in="blur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
+        <linearGradient id="sArcTop" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#93c5fd"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+        <linearGradient id="sArcMid" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+        <linearGradient id="sArcBot" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+        <radialGradient id="sFocal" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#93c5fd" stop-opacity="0.5"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
+        <filter id="sGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
-      <path d="M 3,7 C 16,2 34,10 52,28" fill="none" stroke="url(#arcTop)" stroke-width="2.6" stroke-linecap="round" opacity="0.95"/>
-      <path d="M 3,28 C 20,26 36,27 52,28" fill="none" stroke="url(#arcMid)" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M 3,49 C 16,54 34,46 52,28" fill="none" stroke="url(#arcBot)" stroke-width="2.6" stroke-linecap="round" opacity="0.85"/>
-      <circle cx="52" cy="28" r="10" fill="url(#focalGlow)"/>
+      <path d="M 3,7 C 16,2 34,10 52,28" fill="none" stroke="url(#sArcTop)" stroke-width="2.6" stroke-linecap="round" opacity="0.95"/>
+      <path d="M 3,28 C 20,26 36,27 52,28" fill="none" stroke="url(#sArcMid)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M 3,49 C 16,54 34,46 52,28" fill="none" stroke="url(#sArcBot)" stroke-width="2.6" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="52" cy="28" r="10" fill="url(#sFocal)"/>
       <circle cx="52" cy="28" r="5.5" fill="none" stroke="#60a5fa" stroke-width="1.2" opacity="0.4"/>
-      <circle cx="52" cy="28" r="3.8" fill="#60a5fa" filter="url(#softGlow)"/>
+      <circle cx="52" cy="28" r="3.8" fill="#60a5fa" filter="url(#sGlow)"/>
       <circle cx="52" cy="28" r="2" fill="#ffffff"/>
-      <text x="68" y="37" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="27" letter-spacing="-0.5">
-        <tspan fill="#f1f5f9">Clari</tspan><tspan fill="#60a5fa">DI</tspan>
+      <text x="68" y="37" font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="27" letter-spacing="-0.5">
+        <tspan fill="#f1f5f9">Clari</tspan><tspan fill="#60a5fa" dx="0">DI</tspan>
       </text>
       <line x1="155" y1="42" x2="161" y2="42" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
     </svg>
@@ -1404,243 +336,404 @@
 
   <!-- Nav -->
   <nav>
-    <a class="logo" href="#">
-      <svg width="132" height="34" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="nArcTop" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#93c5fd"/><stop offset="100%" stop-color="#60a5fa"/>
-          </linearGradient>
-          <linearGradient id="nArcMid" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/>
-          </linearGradient>
-          <linearGradient id="nArcBot" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#60a5fa"/>
-          </linearGradient>
-          <radialGradient id="nFocal" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.5"/>
-            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
-          </radialGradient>
-          <filter id="nGlow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <path d="M 3,7 C 16,2 34,10 52,28" fill="none" stroke="url(#nArcTop)" stroke-width="2.6" stroke-linecap="round" opacity="0.95"/>
-        <path d="M 3,28 C 20,26 36,27 52,28" fill="none" stroke="url(#nArcMid)" stroke-width="2.6" stroke-linecap="round"/>
-        <path d="M 3,49 C 16,54 34,46 52,28" fill="none" stroke="url(#nArcBot)" stroke-width="2.6" stroke-linecap="round" opacity="0.85"/>
-        <circle cx="52" cy="28" r="10" fill="url(#nFocal)"/>
-        <circle cx="52" cy="28" r="5.5" fill="none" stroke="#60a5fa" stroke-width="1.2" opacity="0.4"/>
-        <circle cx="52" cy="28" r="3.8" fill="#60a5fa" filter="url(#nGlow)"/>
-        <circle cx="52" cy="28" r="2" fill="#ffffff"/>
-        <text x="68" y="37" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="27" letter-spacing="-0.5">
-          <tspan fill="#f1f5f9">Clari</tspan><tspan fill="#60a5fa">DI</tspan>
-        </text>
-        <line x1="155" y1="42" x2="161" y2="42" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
-      </svg>
-    </a>
-    <span class="nav-badge">&#8226; Beta Enrollment Open</span>
+    <div class="nav-left">
+      <a class="logo" href="#">
+        <svg width="120" height="30" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="nArcTop" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#93c5fd"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+            <linearGradient id="nArcMid" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+            <linearGradient id="nArcBot" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+            <radialGradient id="nFocal" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#93c5fd" stop-opacity="0.5"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
+            <filter id="nGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M 3,7 C 16,2 34,10 52,28" fill="none" stroke="url(#nArcTop)" stroke-width="2.6" stroke-linecap="round" opacity="0.95"/>
+          <path d="M 3,28 C 20,26 36,27 52,28" fill="none" stroke="url(#nArcMid)" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M 3,49 C 16,54 34,46 52,28" fill="none" stroke="url(#nArcBot)" stroke-width="2.6" stroke-linecap="round" opacity="0.85"/>
+          <circle cx="52" cy="28" r="10" fill="url(#nFocal)"/>
+          <circle cx="52" cy="28" r="5.5" fill="none" stroke="#60a5fa" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="52" cy="28" r="3.8" fill="#60a5fa" filter="url(#nGlow)"/>
+          <circle cx="52" cy="28" r="2" fill="#ffffff"/>
+          <text x="68" y="37" font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="27" letter-spacing="-0.5">
+            <tspan fill="#1e3a5f">Clari</tspan><tspan fill="#60a5fa" dx="0">DI</tspan>
+          </text>
+          <line x1="155" y1="42" x2="161" y2="42" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
+        </svg>
+      </a>
+      <nav class="nav-links">
+        <a class="nav-link" href="#how">How it works</a>
+        <a class="nav-link" href="#for">Who it's for</a>
+        <a class="nav-link" href="#impact">Revenue impact</a>
+      </nav>
+    </div>
+    <div class="nav-right">
+      <span class="nav-badge"><span class="nav-badge-dot"></span>Beta Enrollment Open</span>
+      <button class="btn-nav" onclick="openDemo()">Request Demo</button>
+    </div>
   </nav>
 
   <!-- Hero -->
   <section class="hero">
-    <div class="eyebrow">
-      <span class="eyebrow-dot"></span>
-      Real-Time Clinical Documentation — at the Point of Care
+    <div class="hero-left">
+      <div class="eyebrow">
+        <span class="eyebrow-line"></span>
+        Real-time CDI · Point of care
+      </div>
+
+      <h1>Documentation gaps.<br/><em>Caught before signing.</em></h1>
+
+      <p class="subtitle">
+        Clari<span style="color:#60a5fa">DI</span> reads the note as it's written and surfaces missing diagnoses in a sidebar — before the physician clicks sign. No retrospective queries. No CDI back-and-forth.
+      </p>
+
+      <div class="comparison-strip">
+        <div class="comparison-row">
+          <span class="comparison-before">CDI query arrives 48h after signing</span>
+          <span class="comparison-arrow">→</span>
+          <span class="comparison-after">Gap flagged while note is open</span>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-before">Manual chart review misses findings</span>
+          <span class="comparison-arrow">→</span>
+          <span class="comparison-after">Every note audited in &lt;2 seconds</span>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-before">Revenue gap discovered at month-end</span>
+          <span class="comparison-arrow">→</span>
+          <span class="comparison-after">CC/MCC captured day of admission</span>
+        </div>
+      </div>
+
+      <div class="trust-row">
+        <span class="trust-item">EMR-agnostic</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">FHIR-ready</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">FY2025 MS-DRG weights</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">Physician-first design</span>
+      </div>
+
+      <div class="cta-block">
+        <p class="cta-note">Limited beta spots — priority given to inpatient practices.</p>
+        <div class="cta-row">
+          <form class="email-form" id="waitlistForm" onsubmit="handleWaitlist(event)">
+            <input type="email" placeholder="your@hospital.com" required />
+            <button type="submit" class="btn-primary">Join the Beta</button>
+          </form>
+          <button class="btn-secondary" onclick="openDemo()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Request a Demo
+          </button>
+        </div>
+        <div class="success-msg" id="waitlistSuccess">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          You're on the list. We'll be in touch within 24 hours.
+        </div>
+      </div>
     </div>
 
-    <h1>
-      Write once.<br />
-      <span class="gradient-text">Get it right. Move on.</span>
-    </h1>
-
-    <p class="subtitle">
-      Clari<span style="color:#60a5fa">DI</span> flags documentation gaps as you chart — a non-disruptive sidebar suggestion that takes under 5 seconds to act on. No queries two days later. No back-and-forth with CDI. Just sign a complete note and go.
-    </p>
-
-    <!-- Audience -->
-    <div class="audience-bar">
-      <span class="audience-label">Built for</span>
-      <span class="audience-tag">Physicians</span>
-      <span class="audience-tag">CDI Teams</span>
-      <span class="audience-tag">Practice Owners</span>
-    </div>
-
-    <!-- Value props -->
-    <div class="props">
-      <div class="prop">
-        <div class="prop-icon cyan">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d9ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <div>
-          <div class="prop-label">Real-Time at Point of Care</div>
-          <div class="prop-sub">Flags gaps as the physician writes</div>
-        </div>
-      </div>
-      <div class="prop">
-        <div class="prop-icon violet">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c5cfc" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-        </div>
-        <div>
-          <div class="prop-label">FY2025 MS-DRG Optimization</div>
-          <div class="prop-sub">CC/MCC capture, tier-by-tier uplift</div>
-        </div>
-      </div>
-      <div class="prop">
-        <div class="prop-icon blue">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="prop-label">Three Views, One Platform</div>
-          <div class="prop-sub">Physicians, CDI teams, practice owners</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CTA -->
-    <div class="cta-block">
-      <p class="cta-label">Limited beta spots available. <strong>Enroll your team today.</strong></p>
-
-      <div class="success-msg" id="waitlistSuccess">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        &nbsp;You're on the list! We'll reach out when early access opens.
-      </div>
-
-      <form class="email-form" id="waitlistForm" onsubmit="handleWaitlist(event)">
-        <input type="email" placeholder="your@hospital.com" required />
-        <button type="submit" class="btn-primary">Join the Beta</button>
-      </form>
-
-      <div class="divider-row">or</div>
-
-      <button class="btn-demo" onclick="openDemo()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Request a Live Demo
-      </button>
-    </div>
-  </section>
-
-  <!-- How it works -->
-  <section class="how-it-works">
-    <p class="section-label">How it works</p>
-    <h2 class="section-title">Upstream — before the chart closes</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-number">01</div>
-        <div class="step-title">Physician Writes the Note</div>
-        <div class="step-desc">Clari<span style="color:#60a5fa">DI</span> reads the note in real time as it's being written — no retrospective audit, no waiting for coding to flag it downstream.</div>
-      </div>
-      <div class="step">
-        <div class="step-number">02</div>
-        <div class="step-title">Gap Flagged Instantly</div>
-        <div class="step-desc">Transparent NLP logic surfaces underdocumented diagnoses and cites the exact sentence in your note that supports the flag — nothing fabricated, nothing opaque.</div>
-      </div>
-      <div class="step">
-        <div class="step-number">03</div>
-        <div class="step-title">One Click to Complete</div>
-        <div class="step-desc">The physician adds the missing specificity before signing. CDI and practice owners see the revenue impact captured — in real time.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Animated demo -->
-  <section class="live-demo-section">
-    <p class="section-label">See it in action</p>
-    <h2 class="section-title">Clari<span style="color:#60a5fa">DI</span> flags gaps as you write</h2>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:36px;">Concept visualization — real EMR integration will surface flags natively in your existing workflow.</p>
-
-    <div class="live-demo">
-      <!-- Note editor -->
-      <div class="demo-editor">
-        <div class="demo-editor-header">
-          <div class="demo-editor-meta">
-            <span class="demo-editor-title">Progress Note</span>
-            <span class="demo-editor-sub">Internal Medicine · J. Doe, 55M</span>
+    <!-- Hero UI preview -->
+    <div class="hero-right">
+      <div class="hero-card">
+        <div class="hero-card-header">
+          <div>
+            <div class="hero-card-title">Progress Note — Internal Medicine</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">J. Doe · 55M · Unsigned</div>
           </div>
-          <span class="mock-note-status">Unsigned</span>
+          <span class="status-pill status-unsigned">3 gaps found</span>
         </div>
-        <div class="demo-editor-body">
-          <div id="demoText" class="demo-typewriter"></div>
-          <span class="demo-cursor" id="demoCursor">|</span>
-        </div>
-      </div>
+        <div class="hero-card-body">
+          <div class="note-section-label">Assessment &amp; Plan</div>
+          <div style="margin-bottom:10px;">
+            1. Dyspnea, bibasilar rales, <span class="note-hl">O₂ sat 88% on RA</span>, CXR with pulmonary edema.<br/>
+            2. <span class="note-hl">Echo EF 40%</span>, cardiomegaly, dilated LV on MRI.<br/>
+            3. WBC 18.4, hypotensive, <span class="note-hl">blood cx pending.</span>
+          </div>
 
-      <!-- Flags panel -->
-      <div class="demo-flags-panel">
-        <div class="demo-flags-header">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Clari<span style="color:#60a5fa">DI</span>
-          <span id="demoFlagCount" class="demo-flag-count">0 gaps</span>
-        </div>
-        <div id="demoFlags" class="demo-flags-list">
-          <div class="demo-empty-state" id="demoEmpty">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span>Monitoring note...</span>
+          <div class="finding-card amber">
+            <div class="finding-icon amber">!</div>
+            <div class="finding-body">
+              <div class="finding-title">Acute Respiratory Failure not documented<span class="finding-roi">+$4,800</span></div>
+              <div class="finding-desc">O₂ 88% RA supports hypoxic ARF (J96.01) — MCC capture opportunity.</div>
+            </div>
+            <button class="finding-btn">Add to Note</button>
+          </div>
+
+          <div class="finding-card teal">
+            <div class="finding-icon teal">HF</div>
+            <div class="finding-body">
+              <div class="finding-title">HFmrEF not documented<span class="finding-roi">+$1,800</span></div>
+              <div class="finding-desc">EF 40% + pulmonary edema + rales → HFmrEF (I50.20) if supported.</div>
+            </div>
+            <button class="finding-btn">Add to Note</button>
           </div>
         </div>
+        <div class="hero-card-footer">
+          <span class="hero-card-footer-label">Estimated capture value</span>
+          <span class="hero-card-total">+$10,800 across 3 findings</span>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Social proof -->
-  <!-- Stats + Impact -->
-  <div class="stats-strip">
-    <div class="stat">
-      <div class="stat-value">$6.5K</div>
-      <div class="stat-label">Max Revenue / Finding</div>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <div class="stat-value">CC/MCC</div>
-      <div class="stat-label">High-Yield Capture Focus</div>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <div class="stat-value">&lt;2s</div>
-      <div class="stat-label">Per-Note Audit</div>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <div class="stat-value">HL7</div>
-      <div class="stat-label">FHIR-Ready Integration</div>
+  <!-- Differentiators -->
+  <div class="diff-section">
+    <div class="diff-inner">
+      <div class="diff">
+        <div class="diff-vs">vs. retrospective CDI</div>
+        <div class="diff-label">Upstream, not after-the-fact</div>
+        <div class="diff-sub">Traditional CDI reviews charts after signing — or worse, after discharge. Clari<span style="color:#60a5fa">DI</span> works while the note is open.</div>
+        <span class="diff-tag">Real-time intervention</span>
+      </div>
+      <div class="diff">
+        <div class="diff-vs">vs. opaque AI queries</div>
+        <div class="diff-label">Evidence-cited, not fabricated</div>
+        <div class="diff-sub">Every flag shows the exact sentence in the note that triggered it. No black-box suggestions. No physician pushback on unexplained queries.</div>
+        <span class="diff-tag">Full clinical transparency</span>
+      </div>
+      <div class="diff">
+        <div class="diff-vs">vs. CDI team overhead</div>
+        <div class="diff-label">Physician-accepted by design</div>
+        <div class="diff-sub">A sidebar suggestion takes 5 seconds to act on or dismiss. Designed so physicians accept it — not resent it.</div>
+        <span class="diff-tag">5-second workflow</span>
+      </div>
     </div>
   </div>
 
-  <!-- Impact teaser -->
-  <div class="impact-teaser">
-    <div class="impact-text">
-      <strong>What does a 2% CC/MCC capture improvement mean for your practice?</strong><br/>
-      Based on avg. MS-DRG uplift per captured CC/MCC — for 15,000 inpatient admissions annually, that's <strong>$2.1M–$4.5M in recoverable revenue</strong> sitting in notes your physicians already wrote.
+  <!-- How it works -->
+  <div class="how-section" id="how">
+    <p class="section-kicker">How it works</p>
+    <h2 class="section-heading">Upstream — before the chart closes</h2>
+    <p class="section-sub">Three steps. The entire workflow happens before the physician clicks sign. No retrospective review, no queries two days later.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">01</div>
+        <div class="step-title">Physician writes the note</div>
+        <div class="step-desc">Clari<span style="color:#60a5fa">DI</span> reads the note in real time as it's drafted — vitals, labs, exam findings, imaging. No upload, no copy-paste.</div>
+        <div class="step-outcome">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Passive — zero physician effort required
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">02</div>
+        <div class="step-title">Gaps flagged with evidence</div>
+        <div class="step-desc">19+ clinical rules audit the note in under 2 seconds. Each finding cites the exact clinical signal — the sentence, lab value, or imaging finding — that supports it.</div>
+        <div class="step-outcome">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Full transparency — no opaque suggestions
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">03</div>
+        <div class="step-title">One click to complete</div>
+        <div class="step-desc">The physician adds specificity before signing. CDI sees completion rates. Finance sees CC/MCC revenue captured — in real time, not at month-end.</div>
+        <div class="step-outcome">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Revenue captured day of admission
+        </div>
+      </div>
     </div>
-    <div class="impact-figure">
-      <div class="impact-value">$4.5M</div>
-      <div class="impact-unit">Recoverable / year*</div>
-      <div style="font-size:10px; color: var(--muted); margin-top: 6px; max-width: 120px; line-height: 1.4;">*Inpatient only. Based on avg. CC/MCC uplift, FY2025 MS-DRG weights.</div>
+  </div>
+
+  <!-- Built for -->
+  <div class="for-section" id="for">
+    <div class="for-inner">
+      <p class="section-kicker">Built for every role in the workflow</p>
+      <h2 class="section-heading">Different views. Same outcome.</h2>
+      <p class="section-sub">Clari<span style="color:#60a5fa">DI</span> serves three distinct stakeholders — each with their own interface and their own definition of success.</p>
+
+      <div class="for-cards">
+        <div class="for-card">
+          <div class="for-card-role">For Physicians</div>
+          <div class="for-card-name">Your note. Your call.</div>
+          <div class="for-card-pain">"CDI sends me a query two days after I signed. By then I've seen 20 more patients and have no memory of that encounter."</div>
+          <div class="for-card-solution">Clari<span style="color:#60a5fa">DI</span> surfaces the gap while you're still in the note. One click to add the specificity, or one click to dismiss. Done.</div>
+          <ul class="for-card-bullets">
+            <li>Non-disruptive sidebar — doesn't interrupt your workflow</li>
+            <li>Evidence-cited — shows which sentence triggered the flag</li>
+            <li>5 seconds to act — or dismiss with one click, no follow-up</li>
+          </ul>
+        </div>
+
+        <div class="for-card featured">
+          <div class="for-card-role">For CDI Specialists</div>
+          <div class="for-card-name">Every note. Pre-screened.</div>
+          <div class="for-card-pain">"We manually review hundreds of charts and still miss high-value findings that get denied or queried downstream."</div>
+          <div class="for-card-solution">Every note audited in under 2 seconds before the physician signs. Your team focuses on complex cases — Clari<span style="color:#60a5fa">DI</span> handles the systematic gaps.</div>
+          <ul class="for-card-bullets">
+            <li>19+ rules across cardiac, pulmonary, sepsis, renal, and more</li>
+            <li>Confidence scores and clinical evidence per finding</li>
+            <li>Physician query templates pre-written and ready to send</li>
+          </ul>
+        </div>
+
+        <div class="for-card">
+          <div class="for-card-role">For Practice Owners</div>
+          <div class="for-card-name">Revenue. In real time.</div>
+          <div class="for-card-pain">"We see the CC/MCC gap in month-end revenue cycle reports — weeks after the encounter closed and the window to fix it is gone."</div>
+          <div class="for-card-solution">Real-time dashboard shows captured revenue, open opportunities, and ROI by physician, specialty, and admission.</div>
+          <ul class="for-card-bullets">
+            <li>MS-DRG tier uplift tied to each captured finding</li>
+            <li>Denial risk prediction flags high-exposure documentation</li>
+            <li>FHIR-ready integration with your existing billing workflow</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Animated demo -->
+  <div class="demo-section">
+    <div class="demo-section-inner">
+      <div class="demo-section-header">
+        <p class="section-kicker">See it in action</p>
+        <h2 class="section-heading" style="margin-bottom:6px;">Clari<span style="color:#60a5fa">DI</span> flags gaps as you write</h2>
+        <p class="demo-disclaimer">Concept visualization — real EMR integration surfaces suggestions natively in your existing workflow, without leaving the note.</p>
+      </div>
+
+      <div class="live-demo">
+        <div class="demo-editor">
+          <div class="demo-editor-header">
+            <div>
+              <div class="demo-editor-title">Progress Note — Internal Medicine</div>
+              <span class="demo-editor-sub">J. Doe · 55M · In progress</span>
+            </div>
+            <span class="status-pill status-unsigned">Unsigned</span>
+          </div>
+          <div class="demo-editor-body">
+            <div id="demoText" class="demo-typewriter"></div>
+            <span class="demo-cursor" id="demoCursor">|</span>
+          </div>
+        </div>
+
+        <div class="demo-flags-panel">
+          <div class="demo-flags-header">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Clari<span style="color:#60a5fa">DI</span> Suggestions
+            <span id="demoFlagCount" class="demo-flag-count clean">Monitoring...</span>
+          </div>
+          <div id="demoFlags" class="demo-flags-list">
+            <div class="demo-empty-state" id="demoEmpty">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Monitoring note...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-section">
+    <div class="stats-strip">
+      <div class="stat">
+        <div class="stat-value">$6<span>.5K</span></div>
+        <div class="stat-label">Max revenue per finding<br/>(STEMI capture, FY2025)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">19<span>+</span></div>
+        <div class="stat-label">Clinical rules across<br/>cardiac, pulmonary, renal</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">&lt;2<span>s</span></div>
+        <div class="stat-label">Per-note full audit<br/>with DRG analysis</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">HL7</div>
+        <div class="stat-label">FHIR-ready integration<br/>for any major EMR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Impact -->
+  <div class="impact-section" id="impact">
+    <div class="impact-inner">
+      <p class="impact-kicker">Revenue impact</p>
+      <h2 class="impact-heading">The revenue is already in the notes. It just isn't documented.</h2>
+      <p class="impact-subhead">Industry benchmarks show the average inpatient practice leaves 8–12% of potential CC/MCC revenue uncaptured annually. Clari<span style="color:#5eead4">DI</span> closes that gap upstream — before the chart closes.</p>
+
+      <div class="impact-metrics">
+        <div class="impact-metric">
+          <div class="impact-metric-value">$6<em>,500</em></div>
+          <div class="impact-metric-label">Max per finding</div>
+          <div class="impact-metric-sub">STEMI capture, FY2025 MS-DRG weights</div>
+        </div>
+        <div class="impact-metric">
+          <div class="impact-metric-value">19<em>+</em></div>
+          <div class="impact-metric-label">Clinical rules</div>
+          <div class="impact-metric-sub">Cardiac, pulmonary, sepsis, renal, and more</div>
+        </div>
+        <div class="impact-metric">
+          <div class="impact-metric-value">&lt;2<em>s</em></div>
+          <div class="impact-metric-label">Per-note audit</div>
+          <div class="impact-metric-sub">Full DRG analysis with physician query generation</div>
+        </div>
+      </div>
+
+      <div class="impact-findings-label">High-value findings — ROI per captured diagnosis</div>
+      <div class="impact-findings">
+        <div class="impact-pill"><span class="impact-pill-name">STEMI</span><span class="impact-pill-roi">$6,500</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Pressure Ulcer ≥ Stage 3</span><span class="impact-pill-roi">$5,500</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">NSTEMI</span><span class="impact-pill-roi">$5,200</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Acute Resp. Failure</span><span class="impact-pill-roi">$4,800</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Cardiogenic Shock</span><span class="impact-pill-roi">$4,500</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Sepsis</span><span class="impact-pill-roi">$4,200</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Pulmonary Embolism</span><span class="impact-pill-roi">$3,800</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Malnutrition</span><span class="impact-pill-roi">$2,800</span></div>
+        <div class="impact-pill"><span class="impact-pill-name">Heart Failure</span><span class="impact-pill-roi">$1,800</span></div>
+      </div>
+
+      <div class="impact-findings-label">Estimated annual recoverable revenue by practice size</div>
+      <div class="impact-tiers">
+        <div class="impact-tier">
+          <div class="impact-tier-label">Community</div>
+          <div class="impact-tier-name">Community Hospital</div>
+          <div class="impact-tier-admits">~5,000 inpatient admissions / yr</div>
+          <div class="impact-tier-value">$700K–$1.5M</div>
+          <div class="impact-tier-unit">estimated recoverable / year</div>
+        </div>
+        <div class="impact-tier featured">
+          <div class="impact-tier-label">Regional</div>
+          <div class="impact-tier-name">Regional Medical Center</div>
+          <div class="impact-tier-admits">~15,000 inpatient admissions / yr</div>
+          <div class="impact-tier-value">$2.1M–$4.5M</div>
+          <div class="impact-tier-unit">estimated recoverable / year</div>
+        </div>
+        <div class="impact-tier">
+          <div class="impact-tier-label">Health System</div>
+          <div class="impact-tier-name">Academic Health System</div>
+          <div class="impact-tier-admits">~40,000 inpatient admissions / yr</div>
+          <div class="impact-tier-value">$5.6M–$12M</div>
+          <div class="impact-tier-unit">estimated recoverable / year</div>
+        </div>
+      </div>
+
+      <p class="impact-footnote">* Estimates based on avg. CC/MCC DRG weight uplift and industry CC/MCC capture gap benchmarks. Inpatient only. FY2025 MS-DRG weights. Actual results depend on specialty mix, documentation baseline, and physician adoption rate.</p>
     </div>
   </div>
 
   <!-- Bottom CTA -->
   <section class="bottom-cta">
-    <h2>Ready to close the gap<br/><span>before the chart does?</span></h2>
-    <p>Join physicians and CDI teams already in the beta. Limited spots available.</p>
-    <div class="bottom-cta-actions">
-      <form class="email-form" id="waitlistForm2" onsubmit="handleWaitlist2(event)" style="margin-bottom:0;">
-        <input type="email" placeholder="your@hospital.com" required />
-        <button type="submit" class="btn-primary">Join the Beta</button>
-      </form>
-      <button class="btn-demo" onclick="openDemo()" style="width:auto; padding: 14px 26px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Request a Demo
-      </button>
-    </div>
-    <div class="success-msg" id="waitlistSuccess2" style="max-width:420px; margin: 16px auto 0;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      &nbsp;You're on the list! We'll be in touch soon.
+    <div class="bottom-cta-inner">
+      <p class="bottom-cta-kicker">Accepting pilot sites now</p>
+      <h2>Close the gap<br/><span>before the chart does.</span></h2>
+      <p>We're onboarding 5 pilot sites for Q3 2026 — inpatient practices with 5,000+ admissions preferred. Early partners shape the product roadmap and receive preferred pricing.</p>
+      <div class="bottom-cta-actions">
+        <form class="email-form" id="waitlistForm2" onsubmit="handleWaitlist2(event)">
+          <input type="email" placeholder="your@hospital.com" required />
+          <button type="submit" class="btn-primary">Join the Beta</button>
+        </form>
+        <button class="btn-secondary" onclick="openDemo()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Schedule a Demo
+        </button>
+      </div>
+      <p class="pilot-note">Questions? <strong><a href="mailto:hello@claridi.health" style="color:var(--teal);text-decoration:none;">hello@claridi.health</a></strong></p>
+      <div class="success-msg" id="waitlistSuccess2" style="max-width:420px; margin: 16px auto 0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        You're on the list. We'll be in touch within 24 hours.
+      </div>
     </div>
   </section>
 
@@ -1649,18 +742,18 @@
     <div class="footer-left">
       &copy; 2026 Clari<span style="color:#60a5fa">DI</span> &mdash; <a href="mailto:hello@claridi.health">hello@claridi.health</a>
     </div>
-    <div class="footer-contact">
-      <a class="contact-item" href="mailto:hello@claridi.health">
-        <span class="contact-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        </span>
+    <div class="footer-right">
+      <a class="footer-link" href="mailto:hello@claridi.health">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         hello@claridi.health
       </a>
-      <a class="contact-item" href="mailto:demo@claridi.health">
-        <span class="contact-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </span>
+      <a class="footer-link" href="mailto:demo@claridi.health">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Schedule a Demo
+      </a>
+      <a class="footer-link" href="https://linkedin.com/company/claridi" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        LinkedIn
       </a>
     </div>
   </footer>
@@ -1670,13 +763,13 @@
 <!-- Demo Modal -->
 <div class="modal-overlay" id="demoModal" onclick="closeOnOverlay(event)">
   <div class="modal">
-    <button class="modal-close" onclick="closeDemo()">✕</button>
-    <h2>Request a Live Demo</h2>
-    <p>See Clari<span style="color:#60a5fa">DI</span> audit a real clinical note in under two seconds — with full DRG analysis and physician query generation.</p>
+    <button class="modal-close" onclick="closeDemo()">&#10005;</button>
+    <h2>Schedule a Demo</h2>
+    <p>See Clari<span style="color:#60a5fa">DI</span> audit a real clinical note — full DRG analysis, physician query generation, and revenue impact — in under two seconds.</p>
 
     <div class="success-msg" id="demoSuccess" style="margin-bottom:16px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      &nbsp;Demo request received! We'll be in touch within one business day.
+      Request received. We'll be in touch within one business day.
     </div>
 
     <form id="demoForm" onsubmit="handleDemo(event)">
@@ -1696,6 +789,7 @@
         <label>Role</label>
         <select required>
           <option value="" disabled selected>Select your role</option>
+          <option>Hospitalist / Attending Physician</option>
           <option>CDI Specialist</option>
           <option>HIM Director</option>
           <option>Revenue Cycle Leader</option>
@@ -1705,8 +799,8 @@
         </select>
       </div>
       <div class="modal-field">
-        <label>Anything you'd like to cover? (optional)</label>
-        <textarea rows="3" placeholder="e.g. We're focused on cardiac DRG capture..."></textarea>
+        <label>Anything specific to cover? (optional)</label>
+        <textarea rows="3" placeholder="e.g. We're focused on cardiac DRG capture across 3 hospitals..."></textarea>
       </div>
       <button type="submit" class="btn-demo-submit">Submit Request</button>
     </form>
@@ -1714,247 +808,101 @@
 </div>
 
 <script>
-  function handleWaitlist(e) {
-    e.preventDefault();
-    document.getElementById('waitlistForm').style.display = 'none';
-    document.getElementById('waitlistSuccess').style.display = 'flex';
-  }
+  function handleWaitlist(e) { e.preventDefault(); document.getElementById('waitlistForm').style.display = 'none'; document.getElementById('waitlistSuccess').style.display = 'flex'; }
+  function handleWaitlist2(e) { e.preventDefault(); document.getElementById('waitlistForm2').style.display = 'none'; document.getElementById('waitlistSuccess2').style.display = 'flex'; }
+  function openDemo() { document.getElementById('demoModal').classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeDemo() { document.getElementById('demoModal').classList.remove('open'); document.body.style.overflow = ''; }
+  function closeOnOverlay(e) { if (e.target === document.getElementById('demoModal')) closeDemo(); }
+  function handleDemo(e) { e.preventDefault(); document.getElementById('demoForm').style.display = 'none'; document.getElementById('demoSuccess').style.display = 'flex'; setTimeout(closeDemo, 2800); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDemo(); });
 
-  function handleWaitlist2(e) {
-    e.preventDefault();
-    document.getElementById('waitlistForm2').style.display = 'none';
-    document.getElementById('waitlistSuccess2').style.display = 'flex';
-  }
-
-  function openDemo() {
-    document.getElementById('demoModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeDemo() {
-    document.getElementById('demoModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function closeOnOverlay(e) {
-    if (e.target === document.getElementById('demoModal')) closeDemo();
-  }
-
-  function handleDemo(e) {
-    e.preventDefault();
-    document.getElementById('demoForm').style.display = 'none';
-    document.getElementById('demoSuccess').style.display = 'flex';
-    setTimeout(closeDemo, 2800);
-  }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeDemo();
-  });
-
-  // ── Animated demo ──────────────────────────────────────────────
   const NOTE_SEGMENTS = [
     { text: "Hx: HTN, HLD, T2DM, CAD s/p PCI.\n", trigger: null },
     { text: "CC: Acute dyspnea and fatigue.\n\n", trigger: null },
     { text: "Vitals: BP 140/90 · HR 78 · ", trigger: null },
-    { text: "O₂ sat 88% on room air", trigger: "arf", hlClass: "hl-cyan" },
+    { text: "O₂ sat 88% on room air", trigger: "arf", hlClass: "hl-amber" },
     { text: " · Temp 38.9°C\n\n", trigger: null },
     { text: "Exam: Bibasilar rales bilaterally.\n\n", trigger: null },
     { text: "Labs: WBC 18.4 · Cr 2.4 (base 1.1) · ", trigger: null },
-    { text: "blood cultures pending · hypotensive on arrival", trigger: "sep", hlClass: "hl-violet" },
+    { text: "blood cultures pending · hypotensive on arrival", trigger: "sep", hlClass: "hl-red" },
     { text: "\n\n", trigger: null },
     { text: "Imaging: CXR — cardiomegaly + pulmonary edema. ", trigger: null },
-    { text: "Echo EF 40%", trigger: "hf", hlClass: "hl-blue" },
+    { text: "Echo EF 40%", trigger: "hf", hlClass: "hl-teal" },
     { text: "\n\nAssessment: Acute cardiopulmonary presentation.", trigger: null },
   ];
 
   const FLAGS = {
-    arf: {
-      cls: "",
-      title: "Acute Respiratory Failure not documented",
-      roi: "+$4,800",
-      evidence: '"O₂ sat 88% on room air" — supports hypoxic ARF (J96.01). Add to capture MCC.',
-      addendum: "\n\nAddendum: Acute hypoxic respiratory failure (J96.01) — supported by O₂ sat 88% on room air requiring supplemental support. Documented per clinical findings.",
-    },
-    sep: {
-      cls: "violet",
-      title: "Sepsis not documented",
-      roi: "+$4,200",
-      evidence: '"WBC 18.4, hypotensive, blood cultures pending" — meets SIRS criteria. Specify source.',
-      addendum: "\n\nAddendum: Sepsis secondary to suspected pulmonary source (A41.9) — meets SIRS criteria per WBC 18.4, hypotension on arrival, and positive culture workup pending. Documented per clinical findings.",
-    },
-    hf: {
-      cls: "blue",
-      title: "Heart failure not documented",
-      roi: "+$1,800",
-      evidence: '"EF 40%, pulmonary edema, bibasilar rales" — consistent with HFmrEF. Document if supported.',
-      addendum: "\n\nAddendum: Acute decompensated heart failure with mildly reduced ejection fraction (HFmrEF, I50.20) — EF 40% on echo, pulmonary edema on CXR, bibasilar rales on exam. Documented per clinical findings.",
-    },
+    arf: { cls: "amber", title: "Acute Respiratory Failure not documented", roi: "+$4,800", evidence: '"O₂ sat 88% on room air" — supports hypoxic ARF (J96.01). Capture as MCC.', addendum: "\n\nAddendum: Acute hypoxic respiratory failure (J96.01) — O₂ sat 88% on room air requiring supplemental support. Documented per clinical findings." },
+    sep: { cls: "red",   title: "Sepsis not documented",                      roi: "+$4,200", evidence: '"WBC 18.4, hypotensive, cultures pending" — meets SIRS criteria. Specify source.', addendum: "\n\nAddendum: Sepsis, suspected pulmonary source (A41.9) — SIRS criteria met per WBC 18.4, hypotension on arrival, culture workup pending. Documented per clinical findings." },
+    hf:  { cls: "teal",  title: "HFmrEF not documented",                      roi: "+$1,800", evidence: '"EF 40%, pulmonary edema, bibasilar rales" — consistent with HFmrEF (I50.20).', addendum: "\n\nAddendum: Acute decompensated HFmrEF (I50.20) — EF 40% on echo, pulmonary edema on CXR, bibasilar rales on exam. Documented per clinical findings." },
   };
 
-  let demoRunning = false;
-  let demoTimeout = null;
+  let demoRunning = false, demoTimeout = null;
 
   function makeFlagCard(key) {
-    const f = FLAGS[key];
-    const d = document.createElement("div");
-    d.className = "demo-flag-card " + f.cls;
-    d.dataset.key = key;
-    d.innerHTML = `
-      <div class="demo-flag-card-title">
-        ${f.title}
-        <span class="demo-flag-card-roi">${f.roi}</span>
-      </div>
-      <div class="demo-flag-card-evidence">${f.evidence}</div>
-      <button class="demo-flag-card-btn" onclick="handleAddToNote(this)">Add to Note</button>`;
+    const f = FLAGS[key], d = document.createElement("div");
+    d.className = "demo-flag-card " + f.cls; d.dataset.key = key;
+    d.innerHTML = `<div class="demo-flag-card-title">${f.title}<span class="demo-flag-card-roi">${f.roi}</span></div><div class="demo-flag-card-evidence">${f.evidence}</div><button class="demo-flag-card-btn" onclick="handleAddToNote(this)">Add to Note</button>`;
     return d;
   }
 
   function updateCount(n) {
-    const el = document.getElementById("demoFlagCount");
-    if (el) el.textContent = n === 0 ? "0 gaps" : `${n} gap${n > 1 ? "s" : ""} found`;
+    const el = document.getElementById("demoFlagCount"); if (!el) return;
+    if (n === 0) { el.textContent = "Monitoring..."; el.className = "demo-flag-count clean"; }
+    else { el.textContent = `${n} gap${n > 1 ? "s" : ""} found`; el.className = "demo-flag-count"; }
   }
 
   function runDemo() {
-    if (demoRunning) return;
-    demoRunning = true;
-
-    const textEl   = document.getElementById("demoText");
-    const flagsEl  = document.getElementById("demoFlags");
-    const emptyEl  = document.getElementById("demoEmpty");
+    if (demoRunning) return; demoRunning = true;
+    const textEl = document.getElementById("demoText"), flagsEl = document.getElementById("demoFlags"), emptyEl = document.getElementById("demoEmpty");
     if (!textEl || !flagsEl) return;
-
-    textEl.innerHTML = "";
-    flagsEl.innerHTML = "";
-    if (emptyEl) flagsEl.appendChild(emptyEl);
-    emptyEl && (emptyEl.style.display = "flex");
+    textEl.innerHTML = ""; flagsEl.innerHTML = "";
+    if (emptyEl) { flagsEl.appendChild(emptyEl); emptyEl.style.display = "flex"; }
     updateCount(0);
-
     let segIdx = 0, charIdx = 0, flagCount = 0;
     const SPEED = 28;
-
     function typeNext() {
-      if (segIdx >= NOTE_SEGMENTS.length) {
-        // Done — restart after pause only if no user interaction
-        demoRunning = false;
-        const replayExists = document.getElementById("demoReplay");
-        if (!replayExists) demoTimeout = setTimeout(runDemo, 4000);
-        return;
-      }
-
+      if (segIdx >= NOTE_SEGMENTS.length) { demoRunning = false; if (!document.getElementById("demoReplay")) demoTimeout = setTimeout(runDemo, 4000); return; }
       const seg = NOTE_SEGMENTS[segIdx];
-
-      if (charIdx === 0 && seg.trigger && seg.hlClass) {
-        // Start a highlighted span for this segment
-        const span = document.createElement("span");
-        span.className = seg.hlClass;
-        span.id = "seg_" + segIdx;
-        textEl.appendChild(span);
-      }
-
-      const target = seg.hlClass
-        ? document.getElementById("seg_" + segIdx)
-        : textEl;
-
-      if (charIdx < seg.text.length) {
-        const ch = seg.text[charIdx];
-        if (target) target.textContent += ch;
-        charIdx++;
-        demoTimeout = setTimeout(typeNext, SPEED);
-      } else {
-        // Segment done — fire trigger if any
-        if (seg.trigger) {
-          flagCount++;
-          if (emptyEl) emptyEl.style.display = "none";
-          const card = makeFlagCard(seg.trigger);
-          flagsEl.appendChild(card);
-          updateCount(flagCount);
-          requestAnimationFrame(() => {
-            setTimeout(() => card.classList.add("visible"), 30);
-          });
-        }
-        segIdx++;
-        charIdx = 0;
-        demoTimeout = setTimeout(typeNext, seg.trigger ? 600 : SPEED);
+      if (charIdx === 0 && seg.trigger && seg.hlClass) { const span = document.createElement("span"); span.className = seg.hlClass; span.id = "seg_" + segIdx; textEl.appendChild(span); }
+      const target = seg.hlClass ? document.getElementById("seg_" + segIdx) : textEl;
+      if (charIdx < seg.text.length) { if (target) target.textContent += seg.text[charIdx]; charIdx++; demoTimeout = setTimeout(typeNext, SPEED); }
+      else {
+        if (seg.trigger) { flagCount++; if (emptyEl) emptyEl.style.display = "none"; const card = makeFlagCard(seg.trigger); flagsEl.appendChild(card); updateCount(flagCount); requestAnimationFrame(() => setTimeout(() => card.classList.add("visible"), 30)); }
+        segIdx++; charIdx = 0; demoTimeout = setTimeout(typeNext, seg.trigger ? 600 : SPEED);
       }
     }
-
     demoTimeout = setTimeout(typeNext, 800);
   }
 
   function handleAddToNote(btn) {
-    const card = btn.closest(".demo-flag-card");
-    const key = card.dataset.key;
-    const flag = FLAGS[key];
+    const card = btn.closest(".demo-flag-card"), key = card.dataset.key, flag = FLAGS[key];
     if (!flag || btn.disabled) return;
-
-    // Stop the loop — user is interacting
-    clearTimeout(demoTimeout);
-    demoRunning = false;
-    showReplayBtn();
-
-    // Disable button immediately
-    btn.disabled = true;
-    btn.textContent = "Adding...";
-
-    // Append addendum to note character by character
-    const textEl = document.getElementById("demoText");
-    const addendum = flag.addendum;
-    let i = 0;
-
-    // Create a highlighted span for the addendum
-    const addSpan = document.createElement("span");
-    addSpan.className = card.classList.contains("violet") ? "hl-violet" : card.classList.contains("blue") ? "hl-blue" : "hl-cyan";
+    clearTimeout(demoTimeout); demoRunning = false; showReplayBtn();
+    btn.disabled = true; btn.textContent = "Adding...";
+    const textEl = document.getElementById("demoText"), addSpan = document.createElement("span");
+    addSpan.className = card.classList.contains("red") ? "hl-red" : card.classList.contains("teal") ? "hl-teal" : "hl-amber";
     textEl.appendChild(addSpan);
-
+    let i = 0;
     function typeAddendum() {
-      if (i < addendum.length) {
-        addSpan.textContent += addendum[i];
-        i++;
-        setTimeout(typeAddendum, 18);
-      } else {
-        // Done — confirm button, dim card, remove highlight after brief pause
-        btn.textContent = "Added ✓";
-        btn.style.background = "linear-gradient(135deg, var(--success), #16a34a)";
-        card.style.opacity = "0.45";
-        card.style.borderColor = "rgba(34,211,160,0.2)";
-        setTimeout(() => {
-          addSpan.style.transition = "background 1s ease";
-          addSpan.style.background = "transparent";
-          addSpan.style.borderBottom = "none";
-        }, 1200);
-      }
+      if (i < flag.addendum.length) { addSpan.textContent += flag.addendum[i]; i++; setTimeout(typeAddendum, 18); }
+      else { btn.textContent = "Added \u2713"; btn.style.background = "#16a34a"; card.style.opacity = "0.5"; setTimeout(() => { addSpan.style.transition = "background 1s ease, border-color 1s ease"; addSpan.style.background = "transparent"; addSpan.style.borderBottom = "none"; }, 1200); }
     }
-
     setTimeout(typeAddendum, 200);
   }
 
   function showReplayBtn() {
     if (document.getElementById("demoReplay")) return;
-    const section = document.querySelector(".live-demo-section");
-    const btn = document.createElement("button");
-    btn.id = "demoReplay";
-    btn.className = "demo-restart";
+    const section = document.querySelector(".demo-section-inner"), btn = document.createElement("button");
+    btn.id = "demoReplay"; btn.className = "demo-restart";
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg> Replay demo`;
-    btn.onclick = () => { btn.remove(); runDemo(); };
-    section.appendChild(btn);
+    btn.onclick = () => { btn.remove(); runDemo(); }; section.appendChild(btn);
   }
 
-  // Start demo when section scrolls into view
-  const demoSection = document.querySelector(".live-demo-section");
-  if (demoSection) {
-    const obs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        runDemo();
-        obs.disconnect();
-      }
-    }, { threshold: 0.3 });
-    obs.observe(demoSection);
-  }
+  const demoSection = document.querySelector(".demo-section");
+  if (demoSection) { const obs = new IntersectionObserver(e => { if (e[0].isIntersecting) { runDemo(); obs.disconnect(); } }, { threshold: 0.3 }); obs.observe(demoSection); }
 
-  // Remove splash from DOM after animation completes
-  const splash = document.getElementById('splash');
-  splash.addEventListener('animationend', () => splash.remove());
+  document.getElementById('splash').addEventListener('animationend', () => document.getElementById('splash').remove());
 </script>
-
 </body>
 </html>
